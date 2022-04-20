@@ -1,0 +1,81 @@
+<!-- Content Header (Page header) -->
+<section class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1>Trip Ticket</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="#">Home</a></li>
+          <li class="breadcrumb-item active">Trip Ticket Page</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <!-- /.container-fluid -->
+</section>
+
+
+<div class="col-12">
+  <div class="card">
+    <div class="card-body">
+      <div class="form-group">
+        <label>Driver</label>
+        <select class="custom-select" v-model="tripTicketInfo.driver_id"  :disabled="!allowEdit">
+          <option value="" selected disabled>Select</option>
+          <option v-for="driver in drivers" :key="driver.id" :value="driver.id">{{driver.name}}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Car</label>
+        <select class="custom-select" v-model="tripTicketInfo.car_id" @change="getCarLimits"  :disabled="!allowEdit">
+          <option value="" selected disabled>Select</option>
+          <option v-for="car in cars" :key="car.id" :value="car.id">{{car.name}}</option>
+        </select>
+      </div>
+      <table class="table table-hover text-nowrap">
+        <thead>
+        <tr>
+          <th>Title</th>
+          <th>Description</th>
+          <th>Limit</th>
+          <th>Measure</th>
+          <th v-if="allowEdit"></th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr
+            v-for="(action, id) in tripTicketInfo.meta.approved_actions"
+            :key="id"
+        >
+          <td>
+            <select class="custom-select" v-model="action.key"  :disabled="!allowEdit">
+              <option value="" selected disabled>Select</option>
+              <option v-for="(limit, id) in tripTicketCarLimits" :key="id" :value="id">{{limit.title}} ({{limit.measure}})</option>
+            </select>
+          </td>
+          <td><input type="text" class="form-control" placeholder="Enter name" v-model="action.description" :disabled="!allowEdit"></td>
+          <td><input type="text" class="form-control" placeholder="Enter name" v-model="action.quantity" :disabled="!allowEdit"></td>
+          <td><input type="text" class="form-control" placeholder="Enter name" v-model="action.approver" :disabled="!allowEdit"></td>
+          <td><button type="submit" class="btn btn-outline-danger" v-if="allowEdit" @click="deleteAction(id)">Delete</button></td>
+        </tr>
+
+        </tbody>
+        <tfoot>
+          <tr>
+            <td  v-if="allowEdit"><button type="submit" class="btn btn-outline-info" @click="addAction">Add Action</button></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="card-footer">
+      <button type="submit" class="btn btn-primary mr-3" @click="submitEdit" v-if="allowEdit">Submit</button>
+      <button type="submit" class="btn btn-outline-info mr-3" @click="initEdit" v-if="!allowEdit">Edit</button>
+      <button type="submit" class="btn btn-outline-danger" v-if="!allowEdit" @click="deleteTripTicket">Delete</button>
+    </div>
+  </div>
+</div>
+
