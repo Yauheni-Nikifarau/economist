@@ -1,139 +1,141 @@
-import {ref, reactive} from "vue";
+import {reactive} from 'vue';
+import {ajaxDelete, ajaxGet, ajaxPost, ajaxPut} from '@/services/ajax';
+import {findItemById} from '@/services/helpers';
+import {useToast} from 'vue-toastification';
 
 export default {
     setup() {
-        const apiUrl = process.env.VUE_APP_API_URL + "/fuel-entries";
-        const fuelEntriesList = ref([]);
-        const conditionAddSection = ref(false);
-        const isEditSection = ref(false);
-        const editSectionType = ref('');
-        const editSectionValue = ref('');
-        const deletingEntry = reactive({
-            id: '',
-            fuel_type: '',
-            amount: '',
-            date: ''
-        });
-        const commonHeaders = {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('economist_token')
+        const toast = useToast();
+        const apiUrl = process.env.VUE_APP_API_URL + '/fuel-entries';
+        const pageState = reactive({
+            isEditSection: false,
+            showAddEditSection: false,
+            showDeleteDialogue: false,
+            currentEditingId: undefined,
+            deletingItem: {
+                id: '',
+                fuel_type: '',
+                amount: '',
+                date: ''
             },
-        };
-        const showDeleteDialogue = ref(false);
-        let currentEditingId: any = undefined;
+            editSectionData: {
+                amount: '',
+                fuel_type: ''
+            },
+            fuelEntriesList: []
+        });
 
         const getFuelEntriesList = async () => {
-            const response = await fetch(apiUrl, {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
+            const json = await ajaxGet(apiUrl);
+            if (json) {
+                pageState.fuelEntriesList = json.data;
             }
-            const json = await response.json();
-            fuelEntriesList.value = json;
         };
-        getFuelEntriesList();
 
-        const showAddSection = () => {
-            editSectionValue.value = '';
-            editSectionType.value = '';
-            isEditSection.value = false;
-            conditionAddSection.value = true;
-        }
-
-        const closeAddSection = () => {
-            conditionAddSection.value = false;
-        }
-
-        const callEditProcess = (id: any) => {
-            const fuelEntry = fuelEntriesList.value.find((item) => {
-                return id === item.id;
-            });
-            isEditSection.value = true;
-            editSectionType.value = fuelEntry.fuel_type;
-            editSectionValue.value = fuelEntry.amount;
-            conditionAddSection.value = true;
-            currentEditingId = id;
-        }
-
-        const submitEditAction = async () => {
-            if (!editSectionType.value || currentEditingId === undefined || !editSectionValue.value) return;
-            const response = await fetch(apiUrl + '/' + currentEditingId, {
-                method: 'PUT',
-                ...commonHeaders,
-                body: JSON.stringify({
-                    fuel_type: editSectionType.value,
-                    amount: editSectionValue.value
-                })
-            });
-            console.log(await response.json());
-            if (response.ok) {
-                editSectionValue.value = '';
-                editSectionType.value = '';
-                currentEditingId = undefined;
-                closeAddSection();
-                getFuelEntriesList();
-            }
-        }
+        const initAddProcess = () => {
+            resetEditSection();
+            showAddSection();
+        };
 
         const submitAddAction = async () => {
-            if (!editSectionType.value || !editSectionValue.value) return;
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                ...commonHeaders,
-                body: JSON.stringify({
-                    fuel_type: editSectionType.value,
-                    amount: editSectionValue.value
-                })
-            });
-            if (response.ok) {
-                editSectionValue.value = '';
-                editSectionType.value = '';
-                currentEditingId = undefined;
+            if (
+                !pageState.editSectionData.fuel_type ||
+                !pageState.editSectionData.amount
+            ) {
+                toast.error('Please fill all necessary fields');
+                return;
+            }
+            const json = await ajaxPost(apiUrl, pageState.editSectionData);
+            if (json) {
+                resetEditSection();
                 closeAddSection();
                 getFuelEntriesList();
             }
-        }
+        };
 
-        const callDeleteProcess = (id: any) => {
-            const fuelEntry = fuelEntriesList.value.find((item) => {
-                return item.id === id;
-            })
-            deletingEntry.id = fuelEntry.id;
-            deletingEntry.fuel_type = fuelEntry.fuel_type;
-            deletingEntry.amount = fuelEntry.amount;
-            deletingEntry.date = fuelEntry.date;
-            showDeleteDialogue.value = true;
-        }
+        const initEditProcess = (id: number) => {
+            const fuelEntry = findItemById(pageState.fuelEntriesList, id);
+            if (fuelEntry) {
+                pageState.isEditSection = true;
+                pageState.editSectionData = {
+                    amount: fuelEntry.amount,
+                    fuel_type: fuelEntry.fuel_type
+                };
+                pageState.showAddEditSection = true;
+                pageState.currentEditingId = id;
+            }
+        };
 
-        const closeDeleteDialogue = () => {
-            showDeleteDialogue.value = false
-        }
+        const submitEditAction = async () => {
+            if (
+                !pageState.editSectionData.fuel_type ||
+                pageState.currentEditingId === undefined ||
+                !pageState.editSectionData.amount
+            ) {
+                toast.error('Please fill all necessary fields');
+                return;
+            }
+
+            const json = await ajaxPut(
+                apiUrl + '/' + pageState.currentEditingId,
+                pageState.editSectionData
+            );
+            if (json) {
+                resetEditSection();
+                closeAddSection();
+                getFuelEntriesList();
+            }
+        };
+
+        const initDeleteProcess = (id: number) => {
+            const fuelEntry = findItemById(pageState.fuelEntriesList, id);
+            if (fuelEntry) {
+                pageState.deletingItem = fuelEntry;
+                showDeleteDialogue();
+            }
+        };
 
         const submitDeleteAction = async () => {
-            const response = await fetch(apiUrl + '/' + deletingEntry.id, {
-                method: 'DELETE',
-                ...commonHeaders
-            });
-            if (response.ok) {
+            const json = await ajaxDelete(
+                apiUrl + '/' + pageState.deletingItem.id
+            );
+            if (json) {
                 closeDeleteDialogue();
                 getFuelEntriesList();
             }
-        }
+        };
+
+        const showAddSection = () => {
+            resetEditSection();
+            pageState.showAddEditSection = true;
+        };
+
+        const closeAddSection = () => {
+            pageState.showAddEditSection = false;
+        };
+
+        const showDeleteDialogue = () => {
+            pageState.showDeleteDialogue = true;
+        };
+
+        const closeDeleteDialogue = () => {
+            pageState.showDeleteDialogue = false;
+        };
+
+        const resetEditSection = () => {
+            pageState.editSectionData.amount = '';
+            pageState.editSectionData.fuel_type = '';
+            pageState.currentEditingId = undefined;
+            pageState.isEditSection = false;
+        };
+
+        getFuelEntriesList();
 
         return {
-            fuelEntriesList,
-            conditionAddSection,
-            isEditSection,
-            editSectionType,
-            editSectionValue,
-            showDeleteDialogue,
-            deletingEntry,
-            callEditProcess,
-            callDeleteProcess,
-            showAddSection,
+            pageState,
+            initAddProcess,
+            initEditProcess,
+            initDeleteProcess,
             closeAddSection,
             submitEditAction,
             submitAddAction,
@@ -141,5 +143,5 @@ export default {
             submitDeleteAction
         };
     },
-    name: "fuel-entries",
+    name: 'fuel-entries'
 };

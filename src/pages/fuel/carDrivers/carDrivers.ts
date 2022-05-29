@@ -1,134 +1,136 @@
-import {ref, reactive} from "vue";
+import {reactive} from 'vue';
+import {ajaxDelete, ajaxGet, ajaxPost, ajaxPut} from '@/services/ajax';
+import {findItemById} from '@/services/helpers';
+import {useToast} from 'vue-toastification';
 
 export default {
     setup() {
-        const apiUrl = process.env.VUE_APP_API_URL + "/drivers";
-        const driversList = ref([]);
-        const conditionAddSection = ref(false);
-        const isEditSection = ref(false);
-        const editSectionSlug = ref('');
-        const editSectionName = ref('');
-        const deletingDriver = reactive({
-            id: '',
-            name: '',
-        });
-        const commonHeaders = {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('economist_token')
+        const toast = useToast();
+        const apiUrl = process.env.VUE_APP_API_URL + '/drivers';
+        const pageState = reactive({
+            driversList: [],
+            isEditSection: false,
+            showAddEditSection: false,
+            showDeleteDialogue: false,
+            currentEditingId: undefined,
+            deletingItem: {
+                id: '',
+                name: '',
+                slug: ''
             },
-        };
-        const showDeleteDialogue = ref(false);
-        let currentEditingId: any = undefined;
+            editSectionData: {
+                slug: '',
+                name: ''
+            }
+        });
 
         const getDriversList = async () => {
-            const response = await fetch(apiUrl, {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
+            const json = await ajaxGet(apiUrl);
+            if (json) {
+                pageState.driversList = json.data;
             }
-            const json = await response.json();
-            driversList.value = json;
         };
-        getDriversList();
 
-        const showAddSection = () => {
-            editSectionSlug.value = '';
-            editSectionName.value = '';
-            isEditSection.value = false;
-            conditionAddSection.value = true;
-        }
-
-        const closeAddSection = () => {
-            conditionAddSection.value = false;
-        }
-
-        const callEditProcess = (id: any) => {
-            const driver = driversList.value.find((item) => {
-                return id === item.id;
-            });
-            isEditSection.value = true;
-            editSectionSlug.value = driver.slug;
-            editSectionName.value = driver.name;
-            conditionAddSection.value = true;
-            currentEditingId = id;
-        }
-
-        const submitEditAction = async () => {
-            if (currentEditingId === undefined || !editSectionName.value) return;
-            const response = await fetch(apiUrl + '/' + currentEditingId, {
-                method: 'PUT',
-                ...commonHeaders,
-                body: JSON.stringify({
-                    slug: editSectionSlug.value,
-                    name: editSectionName.value
-                })
-            });
-            if (response.ok) {
-                editSectionSlug.value = '';
-                editSectionName.value = '';
-                currentEditingId = undefined;
-                closeAddSection();
-                getDriversList();
-            }
-        }
+        const initAddProcess = () => {
+            resetEditSection();
+            showAddSection();
+        };
 
         const submitAddAction = async () => {
-            if (!editSectionName.value) return;
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                ...commonHeaders,
-                body: JSON.stringify({
-                    slug: editSectionSlug.value ? editSectionSlug.value : '',
-                    name: editSectionName.value
-                })
-            });
-            if (response.ok) {
-                editSectionSlug.value = '';
-                editSectionName.value = '';
-                currentEditingId = undefined;
+            if (!pageState.editSectionData.name) {
+                toast.error('Please fill all necessary fields');
+                return;
+            }
+            const json = await ajaxPost(apiUrl, pageState.editSectionData);
+            if (json) {
+                resetEditSection();
                 closeAddSection();
                 getDriversList();
             }
-        }
+        };
 
-        const callDeleteProcess = (id: any) => {
-            const driver = driversList.value.find((item) => {
-                return item.id === id;
-            })
-            deletingDriver.id = driver.id;
-            deletingDriver.name = driver.name;
-            showDeleteDialogue.value = true;
-        }
+        const initEditProcess = (id: number) => {
+            const driver = findItemById(pageState.driversList, id);
+            if (driver) {
+                pageState.isEditSection = true;
+                pageState.editSectionData = {
+                    slug: driver.slug,
+                    name: driver.name
+                };
+                pageState.showAddEditSection = true;
+                pageState.currentEditingId = id;
+            }
+        };
 
-        const closeDeleteDialogue = () => {
-            showDeleteDialogue.value = false
-        }
+        const submitEditAction = async () => {
+            if (
+                !pageState.editSectionData.name ||
+                pageState.currentEditingId === undefined
+            ) {
+                toast.error('Please fill all necessary fields');
+                return;
+            }
+
+            const json = await ajaxPut(
+                apiUrl + '/' + pageState.currentEditingId,
+                pageState.editSectionData
+            );
+            if (json) {
+                resetEditSection();
+                closeAddSection();
+                getDriversList();
+            }
+        };
+
+        const initDeleteProcess = (id: number) => {
+            const driver = findItemById(pageState.driversList, id);
+            if (driver) {
+                pageState.deletingItem = driver;
+                showDeleteDialogue();
+            }
+        };
 
         const submitDeleteAction = async () => {
-            const response = await fetch(apiUrl + '/' + deletingDriver.id, {
-                method: 'DELETE',
-                ...commonHeaders
-            });
-            if (response.ok) {
+            const json = await ajaxDelete(
+                apiUrl + '/' + pageState.deletingItem.id
+            );
+            if (json) {
                 closeDeleteDialogue();
                 getDriversList();
             }
-        }
+        };
+
+        const showAddSection = () => {
+            pageState.showAddEditSection = true;
+        };
+
+        const closeAddSection = () => {
+            pageState.showAddEditSection = false;
+        };
+
+        const showDeleteDialogue = () => {
+            pageState.showDeleteDialogue = true;
+        };
+
+        const closeDeleteDialogue = () => {
+            pageState.showDeleteDialogue = false;
+        };
+
+        const resetEditSection = () => {
+            pageState.editSectionData.slug = '';
+            pageState.editSectionData.name = '';
+            pageState.currentEditingId = undefined;
+            pageState.isEditSection = false;
+        };
+
+        getDriversList();
 
         return {
-            driversList,
-            conditionAddSection,
-            isEditSection,
-            editSectionSlug,
-            editSectionName,
+            pageState,
             showDeleteDialogue,
-            deletingDriver,
-            callEditProcess,
-            callDeleteProcess,
-            showAddSection,
+            initAddProcess,
+            initEditProcess,
+            initDeleteProcess,
             closeAddSection,
             submitEditAction,
             submitAddAction,
@@ -136,5 +138,5 @@ export default {
             submitDeleteAction
         };
     },
-    name: "car-drivers",
+    name: 'car-drivers'
 };

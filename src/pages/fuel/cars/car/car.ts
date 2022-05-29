@@ -1,116 +1,104 @@
-import {ref} from "vue";
-import { useRoute } from "vue-router";
-import router from "@/router";
+import {reactive, ref} from 'vue';
+import {useRoute} from 'vue-router';
+import router from '@/router';
+import {ajaxGet, ajaxPost, ajaxPut, ajaxDelete} from '@/services/ajax';
 
 export default {
     setup() {
         const route = useRoute();
         const slug = route.params.slug;
         const endOfApiUrl = slug === 'new' ? '' : '/' + slug;
-        const apiUrl = process.env.VUE_APP_API_URL + "/cars" + endOfApiUrl;
-        const carInfo = ref<any>({});
-        const allowEdit= ref(false);
-
-        const commonHeaders = {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('economist_token')
-            },
-        };
+        const apiUrl = process.env.VUE_APP_API_URL + '/cars' + endOfApiUrl;
+        const carInfo = reactive({
+            slug: '',
+            name: '',
+            fuel_type: '',
+            meta: {
+                plates: '',
+                limits: <any>{
+                    '1': {
+                        title: '',
+                        description: '',
+                        value: '',
+                        measure: ''
+                    }
+                }
+            }
+        });
+        const allowEdit = ref(false);
 
         const getCarInfo = async () => {
-            const response = await fetch(apiUrl, {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
+            const json = await ajaxGet(apiUrl);
+            if (json) {
+                carInfo.slug = json.data.slug;
+                carInfo.name = json.data.name;
+                carInfo.fuel_type = json.data.fuel_type;
+                carInfo.meta = json.data.meta;
             }
-            const json = await response.json();
-            console.log(json)
-            carInfo.value = json;
         };
 
-        const initEdit = () => {
+        const initEditProcess = () => {
             allowEdit.value = true;
-        }
+        };
 
-        const submitEdit = async () => {
-            let requestBody = <any> {
-                slug: carInfo.value.slug,
-                name: carInfo.value.name,
-                fuel_type: carInfo.value.fuel_type,
-                plates: carInfo.value.meta.plates,
+        const submitEditAction = async () => {
+            const requestBody = <any>{
+                slug: carInfo.slug,
+                name: carInfo.name,
+                fuel_type: carInfo.fuel_type,
+                plates: carInfo.meta.plates
+            };
+            for (const id in carInfo.meta.limits) {
+                requestBody['limits-' + id + '-title'] =
+                    carInfo.meta.limits[id]['title'];
+                requestBody['limits-' + id + '-description'] =
+                    carInfo.meta.limits[id]['description'];
+                requestBody['limits-' + id + '-value'] =
+                    carInfo.meta.limits[id]['value'];
+                requestBody['limits-' + id + '-measure'] =
+                    carInfo.meta.limits[id]['measure'];
             }
-            for (const id in carInfo.value.meta.limits) {
-                requestBody['limits-' + id + '-title'] = carInfo.value.meta.limits[id]['title'];
-                requestBody['limits-' + id + '-description'] = carInfo.value.meta.limits[id]['description'];
-                requestBody['limits-' + id + '-value'] = carInfo.value.meta.limits[id]['value'];
-                requestBody['limits-' + id + '-measure'] = carInfo.value.meta.limits[id]['measure'];
-            }
-            requestBody = JSON.stringify(requestBody);
-            let restMethod = 'PUT';
+            let json: undefined;
+
             if (slug === 'new') {
-                restMethod = 'POST';
+                json = await ajaxPost(apiUrl, requestBody);
+            } else {
+                json = await ajaxPut(apiUrl, requestBody);
             }
-            const response = await fetch(apiUrl, {
-                method: restMethod,
-                ...commonHeaders,
-                body: requestBody
-            });
-            if (response.ok) {
+
+            if (json) {
                 router.push('/fuel/cars');
             }
-        }
+        };
 
         const addLimit = () => {
-            const keys = Object.keys(carInfo.value.meta.limits);
+            const keys = Object.keys(carInfo.meta.limits);
             let key = keys.reduce((prev, cur) => {
                 return parseInt(prev) > parseInt(cur) ? prev : cur;
             });
-            key = (parseInt(key) + 1) + '';
-            console.log(key);
+            key = parseInt(key) + 1 + '';
 
-            carInfo.value.meta.limits[key] = {
+            carInfo.meta.limits[key] = {
                 title: '',
                 description: '',
                 value: '',
                 measure: ''
-            }
-        }
+            };
+        };
 
         const deleteLimit = (id: any) => {
-            delete carInfo.value.meta.limits[id];
-        }
+            delete carInfo.meta.limits[id];
+        };
 
         const deleteCar = async () => {
-            const response = await fetch(apiUrl, {
-                method: 'DELETE',
-                ...commonHeaders
-            });
-            if (response.ok) {
+            const json = await ajaxDelete(apiUrl);
+            if (json) {
                 router.push('/fuel/cars');
             }
-        }
+        };
 
         if (slug === 'new') {
-            carInfo.value = {
-                slug: '',
-                name: '',
-                fuel_type: '',
-                meta: {
-                    plates: '',
-                    limits: {
-                        '1': {
-                            title: '',
-                            description: '',
-                            value: '',
-                            measure: ''
-                        }
-                    }
-                }
-            };
-            initEdit();
+            initEditProcess();
         } else {
             getCarInfo();
         }
@@ -118,12 +106,12 @@ export default {
         return {
             carInfo,
             allowEdit,
-            initEdit,
-            submitEdit,
+            initEditProcess,
+            submitEditAction,
             addLimit,
             deleteLimit,
             deleteCar
         };
     },
-    name: "car",
+    name: 'car'
 };

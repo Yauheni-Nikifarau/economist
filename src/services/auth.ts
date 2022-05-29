@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 const apiUrl = process.env.VUE_APP_API_URL;
+
 const commonHttpHeaders = {
     method: 'POST',
     headers: {
@@ -22,9 +23,9 @@ export const loginByAuth = async (email: string, password: string) => {
     if (!response.ok) {
         throw new Error(json.message);
     }
-    localStorage.setItem('economist_token', json.token);
-    localStorage.setItem('economist_user', JSON.stringify(json.user));
-    return json.token;
+    localStorage.setItem('economist_token', json.data.token);
+    localStorage.setItem('economist_user', JSON.stringify(json.data.user));
+    return json.data.token;
 };
 
 export const registerByAuth = async (name: string, email: string, password: string, rePassword: string) => {
@@ -43,10 +44,11 @@ export const registerByAuth = async (name: string, email: string, password: stri
     if (!response.ok) {
         throw new Error(json.message);
     }
-    localStorage.setItem('economist_token', json.token);
-    localStorage.setItem('economist_user', JSON.stringify(json.user));
-    return json.token;
+    localStorage.setItem('economist_token', json.data.token);
+    localStorage.setItem('economist_user', JSON.stringify(json.data.user));
+    return json.data.token;
 };
+
 export const getProfile = async () => {
     const user = JSON.parse(localStorage.getItem('economist_user'));
     return user;

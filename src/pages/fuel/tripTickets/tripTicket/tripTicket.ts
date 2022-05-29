@@ -1,192 +1,159 @@
-import {ref} from "vue";
-import {useRoute} from "vue-router";
-import router from "@/router";
+import {reactive, ref} from 'vue';
+import {useRoute} from 'vue-router';
+import router from '@/router';
+import {ajaxDelete, ajaxGet, ajaxPost, ajaxPut} from '@/services/ajax';
+import {findItemById} from '@/services/helpers';
 
 export default {
     setup() {
         const route = useRoute();
         const id = route.params.id;
         const endOfApiUrl = id === 'new' ? '' : '/' + id;
-        const apiUrl = process.env.VUE_APP_API_URL + "/trip-tickets" + endOfApiUrl;
-        const tripTicketInfo = ref<any>({});
+        const apiUrl =
+            process.env.VUE_APP_API_URL + '/trip-tickets' + endOfApiUrl;
         const allowEdit = ref(false);
-        const drivers = ref([]);
-        const cars = ref([]);
+        const driversList = ref([]);
+        const carsList = ref([]);
         const tripTicketCarLimits = ref([]);
-
-        const commonHeaders = {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('economist_token')
-            },
-        };
-
-        const getCarsList = async () => {
-            const response = await fetch(process.env.VUE_APP_API_URL + '/cars', {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
-            }
-            const json = await response.json();
-            cars.value = json;
-        };
-
-        const getCarLimits = async () => {
-            const car = cars.value.find((item) => {
-                return item.id === tripTicketInfo.value.car_id;
-            })
-            tripTicketCarLimits.value = car.meta.limits;
-        }
-
-        const getDriversList = async () => {
-            const response = await fetch(process.env.VUE_APP_API_URL + '/drivers', {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
-            }
-            const json = await response.json();
-            drivers.value = json;
-        };
-
-        const getTripTicketInfo = async () => {
-            console.log('getTripTicketInfo')
-            const response = await fetch(apiUrl, {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
-            }
-            const json = await response.json();
-            tripTicketInfo.value = json;
-            if (!tripTicketInfo.value.meta) {
-                tripTicketInfo.value.meta = {
-                    approved_actions: {
-                        '1': {
-                            key: '',
-                            description: '',
-                            quantity: '',
-                            approver: ''
-                        }
-                    }
-                }
-            }
-            if (!tripTicketInfo.value.meta.approved_actions) {
-                tripTicketInfo.value.meta.approved_actions = {
+        const tripTicketInfo = reactive({
+            car_id: <number>undefined,
+            driver_id: '',
+            meta: {
+                approved_actions: <any>{
                     '1': {
                         key: '',
                         description: '',
-                        quantity: '',
+                        value: '',
                         approver: ''
                     }
-                };
+                }
+            }
+        });
+
+        const getTripTicketInfo = async () => {
+            const json = await ajaxGet(apiUrl);
+            if (json) {
+                tripTicketInfo.car_id = json.data.car_id;
+                tripTicketInfo.driver_id = json.data.driver_id;
+                if (json.data.meta) {
+                    tripTicketInfo.meta = json.data.meta;
+                }
             }
         };
 
-        const initEdit = () => {
-            allowEdit.value = true;
-        }
+        const getCarsList = async () => {
+            const json = await ajaxGet(process.env.VUE_APP_API_URL + '/cars-full');
+            if (json) {
+                console.log(json)
+                carsList.value = json.data;
+            }
+        };
 
-        const submitEdit = async () => {
-            console.log(tripTicketInfo.value)
-            let requestBody = <any>{
-                car_id: tripTicketInfo.value.car_id,
-                driver_id: tripTicketInfo.value.driver_id,
+        const getCarLimits = async () => {
+            const car = findItemById(carsList.value, tripTicketInfo.car_id);
+            tripTicketCarLimits.value = car.meta.limits;
+        };
+
+        const getDriversList = async () => {
+            const json = await ajaxGet(
+                process.env.VUE_APP_API_URL + '/drivers'
+            );
+            if (json) {
+                driversList.value = json.data;
             }
-            for (const id in tripTicketInfo.value.meta.approved_actions) {
-                requestBody['approved_actions-' + id + '-key'] = tripTicketInfo.value.meta.approved_actions[id]['key'];
-                requestBody['approved_actions-' + id + '-description'] = tripTicketInfo.value.meta.approved_actions[id]['description'];
-                requestBody['approved_actions-' + id + '-quantity'] = tripTicketInfo.value.meta.approved_actions[id]['quantity'];
-                requestBody['approved_actions-' + id + '-approver'] = tripTicketInfo.value.meta.approved_actions[id]['approver'];
+        };
+
+        const initEditProcess = () => {
+            allowEdit.value = true;
+        };
+
+        const submitEditAction = async () => {
+            const requestBody = <any>{
+                car_id: tripTicketInfo.car_id,
+                driver_id: tripTicketInfo.driver_id
+            };
+            for (const id in tripTicketInfo.meta.approved_actions) {
+                requestBody['approved_actions-' + id + '-key'] =
+                    tripTicketInfo.meta.approved_actions[id]['key'];
+                requestBody['approved_actions-' + id + '-description'] =
+                    tripTicketInfo.meta.approved_actions[id][
+                        'description'
+                    ];
+                requestBody['approved_actions-' + id + '-quantity'] =
+                    tripTicketInfo.meta.approved_actions[id]['quantity'];
+                requestBody['approved_actions-' + id + '-approver'] =
+                    tripTicketInfo.meta.approved_actions[id]['approver'];
             }
-            requestBody = JSON.stringify(requestBody);
-            let restMethod = 'PUT';
+            let json: undefined;
+
             if (id === 'new') {
-                restMethod = 'POST';
+                json = await ajaxPost(apiUrl, requestBody);
+            } else {
+                json = await ajaxPut(apiUrl, requestBody);
             }
-            const response = await fetch(apiUrl, {
-                method: restMethod,
-                ...commonHeaders,
-                body: requestBody
-            });
-            if (response.ok) {
+
+            if (json) {
                 router.push('/fuel/trip-tickets');
             }
-        }
+        };
 
         const addAction = () => {
-            const keys = Object.keys(tripTicketInfo.value.meta.approved_actions);
+            const keys = Object.keys(
+                tripTicketInfo.meta.approved_actions
+            );
             let key = keys.reduce((prev, cur) => {
                 return parseInt(prev) > parseInt(cur) ? prev : cur;
             });
-            key = (parseInt(key) + 1) + '';
+            key = parseInt(key) + 1 + '';
 
-            tripTicketInfo.value.meta.approved_actions[key] = {
+            tripTicketInfo.meta.approved_actions[key] = {
                 key: '',
                 description: '',
                 quantity: '',
                 approver: ''
-            }
-        }
+            };
+        };
 
         const deleteAction = (id: any) => {
-            delete tripTicketInfo.value.meta.approved_actions[id];
-        }
+            delete tripTicketInfo.meta.approved_actions[id];
+        };
 
         const deleteTripTicket = async () => {
-            const response = await fetch(apiUrl, {
-                method: 'DELETE',
-                ...commonHeaders
-            });
-            if (response.ok) {
+            const json = await ajaxDelete(apiUrl);
+            if (json) {
                 router.push('/fuel/trip-tickets');
             }
-        }
+        };
 
         const existingTripTicketFlow = async () => {
-          await getTripTicketInfo();
-          await getCarsList();
-          await getDriversList();
-          await getCarLimits();
-        }
+            await getTripTicketInfo();
+            await getCarsList();
+            await getDriversList();
+            await getCarLimits();
+        };
 
         if (id === 'new') {
-            tripTicketInfo.value = {
-                car_id: '',
-                driver_id: '',
-                meta: {
-                    approved_actions: {
-                        '1': {
-                            key: '',
-                            description: '',
-                            value: '',
-                            approver: ''
-                        }
-                    }
-                }
-            };
-            initEdit();
+            initEditProcess();
             getCarsList();
             getDriversList();
         } else {
-            existingTripTicketFlow()
+            existingTripTicketFlow();
         }
 
         return {
+
             tripTicketInfo,
             allowEdit,
-            cars,
-            drivers,
+            carsList,
+            driversList,
             tripTicketCarLimits,
-            initEdit,
-            submitEdit,
+            initEditProcess,
+            submitEditAction,
             addAction,
             deleteAction,
             deleteTripTicket,
             getCarLimits
         };
     },
-    name: "trip-ticket",
+    name: 'trip-ticket'
 };

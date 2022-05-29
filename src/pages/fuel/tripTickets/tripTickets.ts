@@ -1,27 +1,16 @@
-import {ref} from "vue";
+import {ref} from 'vue';
+import {ajaxGet} from '@/services/ajax';
 
 export default {
     setup() {
-        const apiUrl = process.env.VUE_APP_API_URL + "/trip-tickets";
+        const apiUrl = process.env.VUE_APP_API_URL + '/trip-tickets';
         const tripTicketsList = ref([]);
 
-        const commonHeaders = {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('economist_token')
-            },
-        };
-
         const getTripTicketsList = async () => {
-            const response = await fetch(apiUrl, {
-                ...commonHeaders
-            });
-            if (!response || response.status != 200) {
-                return;
+            const json = await ajaxGet(apiUrl);
+            if (json) {
+                tripTicketsList.value = json.data;
             }
-            const json = await response.json();
-            tripTicketsList.value = json;
         };
         getTripTicketsList();
 
@@ -29,5 +18,5 @@ export default {
             tripTicketsList
         };
     },
-    name: "trip-tickets",
+    name: 'trip-tickets'
 };

@@ -56,10 +56,10 @@
             v-for="(limit, id) in carInfo.meta.limits"
             :key="id"
         >
-          <td><input type="text" class="form-control" placeholder="Enter name" v-model="limit.title" :disabled="!allowEdit"></td>
-          <td><input type="text" class="form-control" placeholder="Enter name" v-model="limit.description" :disabled="!allowEdit"></td>
-          <td><input type="text" class="form-control" placeholder="Enter name" v-model="limit.value" :disabled="!allowEdit"></td>
-          <td><input type="text" class="form-control" placeholder="Enter name" v-model="limit.measure" :disabled="!allowEdit"></td>
+          <td><input type="text" class="form-control" placeholder="Enter Title" v-model="limit.title" :disabled="!allowEdit"></td>
+          <td><input type="text" class="form-control" placeholder="Enter Description" v-model="limit.description" :disabled="!allowEdit"></td>
+          <td><input type="text" class="form-control" placeholder="Enter Limit" v-model="limit.value" :disabled="!allowEdit"></td>
+          <td><input type="text" class="form-control" placeholder="Enter Measure" v-model="limit.measure" :disabled="!allowEdit"></td>
           <td><button type="submit" class="btn btn-outline-danger" v-if="allowEdit" @click="deleteLimit(id)">Delete</button></td>
         </tr>
 
@@ -73,8 +73,8 @@
     </div>
 
     <div class="card-footer">
-      <button type="submit" class="btn btn-primary mr-3" @click="submitEdit" v-if="allowEdit">Submit</button>
-      <button type="submit" class="btn btn-outline-info mr-3" @click="initEdit" v-if="!allowEdit">Edit</button>
+      <button type="submit" class="btn btn-primary mr-3" @click="submitEditAction" v-if="allowEdit">Submit</button>
+      <button type="submit" class="btn btn-outline-info mr-3" @click="initEditProcess" v-if="!allowEdit">Edit</button>
       <button type="submit" class="btn btn-outline-danger" v-if="!allowEdit" @click="deleteCar">Delete</button>
     </div>
   </div>

@@ -24,14 +24,14 @@
         <label>Driver</label>
         <select class="custom-select" v-model="tripTicketInfo.driver_id"  :disabled="!allowEdit">
           <option value="" selected disabled>Select</option>
-          <option v-for="driver in drivers" :key="driver.id" :value="driver.id">{{driver.name}}</option>
+          <option v-for="driver in driversList" :key="driver.id" :value="driver.id">{{driver.name}}</option>
         </select>
       </div>
       <div class="form-group">
         <label>Car</label>
         <select class="custom-select" v-model="tripTicketInfo.car_id" @change="getCarLimits"  :disabled="!allowEdit">
           <option value="" selected disabled>Select</option>
-          <option v-for="car in cars" :key="car.id" :value="car.id">{{car.name}}</option>
+          <option v-for="car in carsList" :key="car.id" :value="car.id">{{car.name}}</option>
         </select>
       </div>
       <table class="table table-hover text-nowrap">
@@ -72,8 +72,8 @@
     </div>
 
     <div class="card-footer">
-      <button type="submit" class="btn btn-primary mr-3" @click="submitEdit" v-if="allowEdit">Submit</button>
-      <button type="submit" class="btn btn-outline-info mr-3" @click="initEdit" v-if="!allowEdit">Edit</button>
+      <button type="submit" class="btn btn-primary mr-3" @click="submitEditAction" v-if="allowEdit">Submit</button>
+      <button type="submit" class="btn btn-outline-info mr-3" @click="initEditProcess" v-if="!allowEdit">Edit</button>
       <button type="submit" class="btn btn-outline-danger" v-if="!allowEdit" @click="deleteTripTicket">Delete</button>
     </div>
   </div>

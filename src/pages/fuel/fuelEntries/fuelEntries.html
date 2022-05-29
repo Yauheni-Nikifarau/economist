@@ -1,4 +1,3 @@
-<!-- Content Header (Page header) -->
 <section class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -13,13 +12,12 @@
             </div>
         </div>
     </div>
-    <!-- /.container-fluid -->
 </section>
 
-<div class="col-12" v-if="conditionAddSection">
+<div class="col-12" v-if="pageState.showAddEditSection">
   <div class="card">
     <div class="card-header">
-      <h3 class="card-title" v-if="isEditSection">Edit Fuel Entry</h3>
+      <h3 class="card-title" v-if="pageState.isEditSection">Edit Fuel Entry</h3>
       <h3 class="card-title" v-else>Add Fuel Entry</h3>
       <div class="card-tools">
         <button type="button" class="btn btn-tool" data-card-widget="remove" title="Remove" @click="closeAddSection">
@@ -31,11 +29,11 @@
     <div class="card-body">
       <div class="form-group">
         <label>Amount</label>
-        <input type="text" class="form-control" placeholder="Enter amount(litres)" v-model="editSectionValue">
+        <input type="text" class="form-control" placeholder="Enter amount(litres)" v-model="pageState.editSectionData.amount">
       </div>
       <div class="form-group">
         <label>Fuel Type</label>
-        <select class="custom-select" v-model="editSectionType">
+        <select class="custom-select" v-model="pageState.editSectionData.fuel_type ">
           <option value="" selected disabled>Select</option>
           <option value="gas_oil">Gas Oil</option>
           <option value="gasoline">Gasoline</option>
@@ -45,7 +43,7 @@
     </div>
 
     <div class="card-footer">
-      <button type="submit" class="btn btn-primary" v-if="isEditSection" @click="submitEditAction">Edit</button>
+      <button type="submit" class="btn btn-primary" v-if="pageState.isEditSection" @click="submitEditAction">Edit</button>
       <button type="submit" class="btn btn-primary" v-else @click="submitAddAction">Add</button>
     </div>
   </div>
@@ -57,7 +55,7 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title pt-2">Fuel Entries Table</h3>
-             <button type="submit" class="btn btn-primary float-right" @click="showAddSection">Add Entry</button>
+             <button type="submit" class="btn btn-primary float-right" @click="initAddProcess">Add Entry</button>
         </div>
 
         <div class="card-body table-responsive p-0">
@@ -73,15 +71,15 @@
                 <tbody>
 
                 <tr
-                    v-for="fuelEntry in fuelEntriesList"
+                    v-for="fuelEntry in pageState.fuelEntriesList"
                     :key="fuelEntry.id"
                 >
                     <td>{{ fuelEntry.date }}</td>
                     <td>{{ fuelEntry.fuel_type }}</td>
                     <td>{{ fuelEntry.amount }}</td>
                     <td>
-                      <button type="button" class="btn btn-outline-info btn-sm" @click="callEditProcess(fuelEntry.id)">Edit</button>
-                      <button type="button" class="btn btn-outline-danger btn-sm ml-3" @click="callDeleteProcess(fuelEntry.id)">Delete</button>
+                      <button type="button" class="btn btn-outline-info btn-sm" @click="initEditProcess(fuelEntry.id)">Edit</button>
+                      <button type="button" class="btn btn-outline-danger btn-sm ml-3" @click="initDeleteProcess(fuelEntry.id)">Delete</button>
                     </td>
                 </tr>
 
@@ -92,15 +90,15 @@
 </div>
 
 <!-- /.content -->
-<div class="modal" style="display: block;" v-if="showDeleteDialogue">
+<div class="modal" style="display: block;" v-if="pageState.showDeleteDialogue">
   <div class="modal-dialog">
     <div class="modal-content bg-danger">
       <div class="modal-header">
         <h4 class="modal-title">Are you sure?</h4>
       </div>
       <div class="modal-body">
-        <p>Delete Fuel Entry From {{ deletingEntry.date }} for {{ deletingEntry.amount }} litres
-          of {{ deletingEntry.fuel_type }}</p>
+        <p>Delete Fuel Entry From {{ pageState.deletingItem.date }} for {{ pageState.deletingItem.amount }} litres
+          of {{ pageState.deletingItem.fuel_type }}</p>
       </div>
       <div class="modal-footer justify-content-between">
         <button type="button" class="btn btn-outline-light" @click="closeDeleteDialogue">Close</button>
